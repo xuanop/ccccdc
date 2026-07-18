@@ -1,0 +1,1051 @@
+-- =============================================
+-- Rivals 实用脚本 | 三种瞄准 + 双ESP + 飞行 + 穿墙
+-- =============================================
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+getgenv().Config = {
+    Aimbot = {
+        Enabled = true,
+        RightClickOnly = true,
+        ForceAimbot = false,
+        Smoothness = 0.16,
+        FOV = 180,
+        DisableFOV = false,
+        PreferHead = true,
+        TeamCheck = false,
+        MaxDistance = 1500,
+        Prediction = 0,
+        AimMethod = "Rivals",
+        MaxMouseMove = 28,
+        WallCheck = true,           -- 墙体检测（新增）
+        BulletWallbang = false,     -- 子弹穿墙
+    },
+    Crosshair = {
+        Enabled = false,
+    },
+    ESP = {
+        Enabled = true,
+        UseLegacy = false,
+        ShowBox = true,
+        ShowName = true,
+        ShowHealth = true,
+        ShowHealthBar = true,
+        ShowDistance = true,
+        ShowWeapon = true,
+        ShowTracers = true,
+        ShowHeadDot = true,
+        TeamCheck = false,
+        MaxDistance = 1000,
+    },
+    Fly = {
+        Enabled = false,
+        Speed = 50,
+        Noclip = false,
+    }
+}
+
+local Window = Library:CreateWindow({
+    Title = "Rivals",
+    Footer = "Obsidian UI",
+    Icon = 95816097006870,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+})
+
+local Tabs = {
+    Main = Window:AddTab("自瞄设置", "target"),
+    ESP = Window:AddTab("ESP", "eye"),
+    Fly = Window:AddTab("飞行", "plane"),
+    ["UI Settings"] = Window:AddTab("UI 设置", "settings"),
+}
+
+-- ==================== 自瞄设置 ====================
+local AimbotGroup = Tabs.Main:AddLeftGroupbox("自瞄设置", "crosshair")
+
+AimbotGroup:AddToggle("AimbotEnabled", {
+    Text = "启用自瞄",
+    Default = true,
+    Callback = function(v) getgenv().Config.Aimbot.Enabled = v end,
+})
+
+AimbotGroup:AddToggle("RightClickOnly", {
+    Text = "仅右键激活",
+    Default = true,
+    Callback = function(v) getgenv().Config.Aimbot.RightClickOnly = v end,
+})
+
+AimbotGroup:AddToggle("ForceAimbot", {
+    Text = "强制自瞄（不需右键）",
+    Default = false,
+    Callback = function(v) getgenv().Config.Aimbot.ForceAimbot = v end,
+})
+
+AimbotGroup:AddDropdown("AimMethod", {
+    Values = {"视角锁定", "Rivals专用", "鼠标移动"},
+    Default = 2,
+    Multi = false,
+    Text = "瞄准方式",
+    Callback = function(Value)
+        if Value == "视角锁定" then
+            getgenv().Config.Aimbot.AimMethod = "Camera"
+        elseif Value == "Rivals专用" then
+            getgenv().Config.Aimbot.AimMethod = "Rivals"
+        else
+            getgenv().Config.Aimbot.AimMethod = "Mouse"
+        end
+    end,
+})
+
+AimbotGroup:AddSlider("AimbotSmoothness", {
+    Text = "自瞄强度 / 平滑度",
+    Default = 0.16, Min = 0.05, Max = 0.8, Rounding = 2,
+    Callback = function(v) getgenv().Config.Aimbot.Smoothness = v end,
+})
+
+AimbotGroup:AddSlider("AimbotFOV", {
+    Text = "FOV 大小",
+    Default = 180, Min = 30, Max = 600, Rounding = 0,
+    Callback = function(v) getgenv().Config.Aimbot.FOV = v end,
+})
+
+AimbotGroup:AddToggle("DisableFOV", {
+    Text = "关闭FOV限制",
+    Default = false,
+    Callback = function(v) getgenv().Config.Aimbot.DisableFOV = v end,
+})
+
+AimbotGroup:AddToggle("PreferHead", {
+    Text = "优先锁头",
+    Default = true,
+    Callback = function(v) getgenv().Config.Aimbot.PreferHead = v end,
+})
+
+AimbotGroup:AddToggle("AimbotTeamCheck", {
+    Text = "启用队伍检查",
+    Default = false,
+    Callback = function(v) getgenv().Config.Aimbot.TeamCheck = v end,
+})
+
+AimbotGroup:AddToggle("WallCheck", {
+    Text = "墙体检测",
+    Default = true,
+    Callback = function(v) getgenv().Config.Aimbot.WallCheck = v end,
+})
+
+AimbotGroup:AddToggle("BulletWallbang", {
+    Text = "子弹穿墙",
+    Default = false,
+    Callback = function(v) getgenv().Config.Aimbot.BulletWallbang = v end,
+})
+
+AimbotGroup:AddSlider("AimbotMaxDistance", {
+    Text = "最大距离",
+    Default = 1500, Min = 100, Max = 3000, Rounding = 0,
+    Callback = function(v) getgenv().Config.Aimbot.MaxDistance = v end,
+})
+
+AimbotGroup:AddSlider("Prediction", {
+    Text = "预测强度",
+    Default = 0, Min = 0, Max = 0.3, Rounding = 2,
+    Callback = function(v) getgenv().Config.Aimbot.Prediction = v end,
+})
+
+AimbotGroup:AddSlider("MaxMouseMove", {
+    Text = "最大鼠标移动（防乱跳）",
+    Default = 28, Min = 8, Max = 60, Rounding = 0,
+    Callback = function(v) getgenv().Config.Aimbot.MaxMouseMove = v end,
+})
+
+AimbotGroup:AddToggle("CrosshairEnabled", {
+    Text = "启用你的准心",
+    Default = false,
+    Callback = function(v)
+        getgenv().Config.Crosshair.Enabled = v
+        if v then
+            pcall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/i3FnZCic"))()
+            end)
+        end
+    end,
+})
+
+-- ==================== ESP 设置 ====================
+local ESPGroup = Tabs.ESP:AddLeftGroupbox("ESP 设置", "eye")
+
+ESPGroup:AddToggle("ESPEnabled", {
+    Text = "启用 ESP",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.Enabled = v end,
+})
+
+ESPGroup:AddToggle("UseLegacyESP", {
+    Text = "使用兼容ESP模式",
+    Default = false,
+    Callback = function(v) getgenv().Config.ESP.UseLegacy = v end,
+})
+
+ESPGroup:AddToggle("ShowBox", {
+    Text = "显示方框",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowBox = v end,
+})
+
+ESPGroup:AddToggle("ShowName", {
+    Text = "显示名称",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowName = v end,
+})
+
+ESPGroup:AddToggle("ShowHealth", {
+    Text = "显示血量文字",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowHealth = v end,
+})
+
+ESPGroup:AddToggle("ShowHealthBar", {
+    Text = "显示血条",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowHealthBar = v end,
+})
+
+ESPGroup:AddToggle("ShowDistance", {
+    Text = "显示距离",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowDistance = v end,
+})
+
+ESPGroup:AddToggle("ShowWeapon", {
+    Text = "显示武器",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowWeapon = v end,
+})
+
+ESPGroup:AddToggle("ShowTracers", {
+    Text = "显示追踪线",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowTracers = v end,
+})
+
+ESPGroup:AddToggle("ShowHeadDot", {
+    Text = "显示头点",
+    Default = true,
+    Callback = function(v) getgenv().Config.ESP.ShowHeadDot = v end,
+})
+
+ESPGroup:AddToggle("ESPTeamCheck", {
+    Text = "队伍检查",
+    Default = false,
+    Callback = function(v) getgenv().Config.ESP.TeamCheck = v end,
+})
+
+ESPGroup:AddSlider("ESPMaxDistance", {
+    Text = "最大距离",
+    Default = 1000, Min = 100, Max = 3000, Rounding = 0,
+    Callback = function(v) getgenv().Config.ESP.MaxDistance = v end,
+})
+
+-- ==================== 飞行设置 ====================
+local FlyGroup = Tabs.Fly:AddLeftGroupbox("飞行设置", "plane")
+
+FlyGroup:AddToggle("FlyEnabled", {
+    Text = "启用飞行",
+    Default = false,
+    Callback = function(v)
+        getgenv().Config.Fly.Enabled = v
+        if v then
+            startFly()
+        else
+            stopFly()
+        end
+    end,
+})
+
+FlyGroup:AddSlider("FlySpeed", {
+    Text = "飞行速度",
+    Default = 50, Min = 10, Max = 200, Rounding = 0,
+    Callback = function(v) getgenv().Config.Fly.Speed = v end,
+})
+
+FlyGroup:AddToggle("Noclip", {
+    Text = "人物穿墙",
+    Default = false,
+    Callback = function(v) getgenv().Config.Fly.Noclip = v end,
+})
+
+FlyGroup:AddLabel("控制方式：WASD移动 | 空格上升 | Ctrl下降")
+
+-- ==================== 自瞄核心 ====================
+local isRightClickHeld = false
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isRightClickHeld = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isRightClickHeld = false
+    end
+end)
+
+local function GetBestTarget()
+    local cfg = getgenv().Config.Aimbot
+    if not cfg.Enabled then return nil end
+
+    local shouldAim = cfg.ForceAimbot or (cfg.RightClickOnly and isRightClickHeld)
+    if not shouldAim then return nil end
+
+    local closest = nil
+    local shortest = math.huge
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local fovRadius = cfg.FOV / 2
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local char = plr.Character
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local hum = char:FindFirstChild("Humanoid")
+            local head = char:FindFirstChild("Head")
+
+            if hrp and hum and hum.Health > 0 then
+                if cfg.TeamCheck then
+                    if LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team then continue end
+                end
+
+                -- 墙体检测（子弹穿墙开启时强制跳过检测）
+                if cfg.WallCheck and not cfg.BulletWallbang then
+                    local myHead = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
+                    if myHead then
+                        local rayParams = RaycastParams.new()
+                        rayParams.FilterDescendantsInstances = {LocalPlayer.Character, char}
+                        rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+                        local toTarget = hrp.Position - myHead.Position
+                        local hit = workspace:Raycast(myHead.Position, toTarget.Unit * (toTarget.Magnitude + 1), rayParams)
+                        if hit then continue end
+                    end
+                end
+
+                local aimPart = (cfg.PreferHead and head) or hrp
+                if not aimPart then aimPart = hrp end
+
+                local screenPos, onScreen = Camera:WorldToViewportPoint(aimPart.Position)
+                if onScreen then
+                    local distToCenter = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                    local realDist = (hrp.Position - Camera.CFrame.Position).Magnitude
+                    local withinFOV = cfg.DisableFOV or (distToCenter <= fovRadius)
+
+                    if withinFOV and realDist <= cfg.MaxDistance and distToCenter < shortest then
+                        shortest = distToCenter
+                        closest = aimPart
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+RunService.RenderStepped:Connect(function()
+    local cfg = getgenv().Config.Aimbot
+    if not cfg.Enabled then return end
+
+    local target = GetBestTarget()
+    if not target then return end
+
+    local targetPos = target.Position
+    if target.Parent and target.Parent:FindFirstChild("HumanoidRootPart") then
+        local vel = target.Parent.HumanoidRootPart.AssemblyLinearVelocity or Vector3.new()
+        targetPos = targetPos + vel * cfg.Prediction
+    end
+
+    local method = cfg.AimMethod
+
+    if method == "Camera" then
+        local currentCF = Camera.CFrame
+        local targetCF = CFrame.new(currentCF.Position, targetPos)
+        Camera.CFrame = currentCF:Lerp(targetCF, cfg.Smoothness)
+
+    elseif method == "Rivals" then
+        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+        if onScreen then
+            local currentMouse = UserInputService:GetMouseLocation()
+            local targetScreen = Vector2.new(screenPos.X, screenPos.Y)
+            local distToTarget = (targetScreen - currentMouse).Magnitude
+
+            if distToTarget < (cfg.FOV / 2) then
+                local lerpAlpha = 1 - (math.clamp(cfg.Smoothness, 0, 0.9) * 0.9)
+                local delta = (targetScreen - currentMouse) * lerpAlpha
+                local maxMove = cfg.MaxMouseMove or 28
+                if delta.Magnitude > maxMove then
+                    delta = delta.Unit * maxMove
+                end
+                if mousemoverel then
+                    mousemoverel(delta.X, delta.Y)
+                end
+            end
+        end
+
+    elseif method == "Mouse" then
+        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+        if onScreen then
+            pcall(function()
+                UserInputService:SetMouseLocation(math.floor(screenPos.X), math.floor(screenPos.Y))
+            end)
+        end
+    end
+end)
+
+-- ==================== 飞行 + 人物穿墙 ====================
+local FlyBodyGyro = nil
+local FlyBodyVelocity = nil
+local FlyKeys = {W = false, S = false, A = false, D = false, Space = false, LCtrl = false}
+
+function stopFly()
+    pcall(function()
+        if FlyBodyGyro then FlyBodyGyro:Destroy() end
+        if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
+    end)
+    FlyBodyGyro = nil
+    FlyBodyVelocity = nil
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char then
+            local hum = char:FindFirstChild("Humanoid")
+            if hum then hum.PlatformStand = false end
+        end
+    end)
+end
+
+function startFly()
+    stopFly()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    if not root or not hum then return end
+
+    pcall(function()
+        hum.PlatformStand = true
+        FlyBodyGyro = Instance.new("BodyGyro")
+        FlyBodyGyro.Name = "FlyGyro"
+        FlyBodyGyro.MaxTorque = Vector3.new(1, 1, 1) * 400000
+        FlyBodyGyro.P = 30000
+        FlyBodyGyro.Parent = root
+
+        FlyBodyVelocity = Instance.new("BodyVelocity")
+        FlyBodyVelocity.Name = "FlyVelocity"
+        FlyBodyVelocity.MaxForce = Vector3.new(1, 1, 1) * 400000
+        FlyBodyVelocity.P = 50000
+        FlyBodyVelocity.Velocity = Vector3.zero
+        FlyBodyVelocity.Parent = root
+    end)
+end
+
+RunService.Stepped:Connect(function()
+    if not getgenv().Config.Fly.Noclip then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not getgenv().Config.Fly.Enabled then return end
+    if not FlyBodyVelocity or not FlyBodyGyro then
+        if getgenv().Config.Fly.Enabled then startFly() end
+        return
+    end
+
+    local dir = Vector3.zero
+    local cam = Camera.CFrame
+    if FlyKeys.W then dir = dir + cam.LookVector end
+    if FlyKeys.S then dir = dir - cam.LookVector end
+    if FlyKeys.A then dir = dir - cam.RightVector end
+    if FlyKeys.D then dir = dir + cam.RightVector end
+    if FlyKeys.Space then dir = dir + Vector3.new(0, 1, 0) end
+    if FlyKeys.LCtrl then dir = dir - Vector3.new(0, 1, 0) end
+
+    if dir.Magnitude > 0 then
+        dir = dir.Unit * getgenv().Config.Fly.Speed
+    end
+
+    FlyBodyVelocity.Velocity = dir
+    FlyBodyGyro.CFrame = cam
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if not getgenv().Config.Fly.Enabled then return end
+    if input.KeyCode == Enum.KeyCode.W then FlyKeys.W = true
+    elseif input.KeyCode == Enum.KeyCode.S then FlyKeys.S = true
+    elseif input.KeyCode == Enum.KeyCode.A then FlyKeys.A = true
+    elseif input.KeyCode == Enum.KeyCode.D then FlyKeys.D = true
+    elseif input.KeyCode == Enum.KeyCode.Space then FlyKeys.Space = true
+    elseif input.KeyCode == Enum.KeyCode.LeftControl then FlyKeys.LCtrl = true end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.W then FlyKeys.W = false
+    elseif input.KeyCode == Enum.KeyCode.S then FlyKeys.S = false
+    elseif input.KeyCode == Enum.KeyCode.A then FlyKeys.A = false
+    elseif input.KeyCode == Enum.KeyCode.D then FlyKeys.D = false
+    elseif input.KeyCode == Enum.KeyCode.Space then FlyKeys.Space = false
+    elseif input.KeyCode == Enum.KeyCode.LeftControl then FlyKeys.LCtrl = false end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.6)
+    if getgenv().Config.Fly.Enabled then
+        startFly()
+    end
+end)
+
+-- ==================== 原版 ESP ====================
+local ESPObjects = {}
+
+local function createESP(player)
+    if ESPObjects[player] then return end
+    local esp = {}
+
+    pcall(function() esp.Box = Drawing.new("Square") end)
+    pcall(function() esp.Name = Drawing.new("Text") end)
+    pcall(function() esp.Health = Drawing.new("Text") end)
+    pcall(function() esp.HealthBarBG = Drawing.new("Square") end)
+    pcall(function() esp.HealthBar = Drawing.new("Square") end)
+    pcall(function() esp.Distance = Drawing.new("Text") end)
+    pcall(function() esp.Weapon = Drawing.new("Text") end)
+    pcall(function() esp.Tracer = Drawing.new("Line") end)
+    pcall(function() esp.HeadDot = Drawing.new("Circle") end)
+
+    if esp.HealthBarBG then
+        esp.HealthBarBG.Color = Color3.fromRGB(0, 0, 0)
+        esp.HealthBarBG.Filled = true
+        esp.HealthBarBG.Thickness = 1
+        esp.HealthBarBG.Transparency = 0.8
+        esp.HealthBarBG.Visible = false
+    end
+    if esp.HealthBar then
+        esp.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+        esp.HealthBar.Filled = true
+        esp.HealthBar.Thickness = 1
+        esp.HealthBar.Transparency = 1
+        esp.HealthBar.Visible = false
+    end
+    if esp.Box then
+        esp.Box.Thickness = 2
+        esp.Box.Color = Color3.fromRGB(255, 50, 50)
+        esp.Box.Filled = false
+        esp.Box.Visible = false
+    end
+    if esp.Name then
+        esp.Name.Center = true
+        esp.Name.Outline = true
+        esp.Name.Color = Color3.fromRGB(255, 255, 255)
+        esp.Name.Size = 14
+        esp.Name.Visible = false
+    end
+    if esp.Health then
+        esp.Health.Center = true
+        esp.Health.Outline = true
+        esp.Health.Size = 12
+        esp.Health.Visible = false
+    end
+    if esp.Distance then
+        esp.Distance.Center = true
+        esp.Distance.Outline = true
+        esp.Distance.Color = Color3.fromRGB(180, 180, 180)
+        esp.Distance.Size = 12
+        esp.Distance.Visible = false
+    end
+    if esp.Weapon then
+        esp.Weapon.Center = true
+        esp.Weapon.Outline = true
+        esp.Weapon.Color = Color3.fromRGB(255, 200, 100)
+        esp.Weapon.Size = 11
+        esp.Weapon.Visible = false
+    end
+    if esp.Tracer then
+        esp.Tracer.Thickness = 1
+        esp.Tracer.Transparency = 0.5
+        esp.Tracer.Visible = false
+    end
+    if esp.HeadDot then
+        esp.HeadDot.Radius = 4
+        esp.HeadDot.Filled = true
+        esp.HeadDot.Color = Color3.fromRGB(255, 255, 0)
+        esp.HeadDot.NumSides = 16
+        esp.HeadDot.Visible = false
+    end
+
+    ESPObjects[player] = esp
+end
+
+local function removeESP(player)
+    local esp = ESPObjects[player]
+    if esp then
+        for _, d in pairs(esp) do
+            pcall(function() if d then d:Remove() end end)
+        end
+        ESPObjects[player] = nil
+    end
+end
+
+local function updateESP(player, esp)
+    local cfg = getgenv().Config.ESP
+    local char = player.Character
+    if not char then
+        for _, d in pairs(esp) do if d then d.Visible = false end end
+        return
+    end
+
+    local humanoid = char:FindFirstChild("Humanoid")
+    local head = char:FindFirstChild("Head")
+    local root = char:FindFirstChild("HumanoidRootPart")
+
+    if not humanoid or humanoid.Health <= 0 or not head or not root then
+        for _, d in pairs(esp) do if d then d.Visible = false end end
+        return
+    end
+
+    if cfg.TeamCheck and player.Team == LocalPlayer.Team then
+        for _, d in pairs(esp) do if d then d.Visible = false end end
+        return
+    end
+
+    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local dist = myRoot and (root.Position - myRoot.Position).Magnitude or 0
+    if dist > cfg.MaxDistance then
+        for _, d in pairs(esp) do if d then d.Visible = false end end
+        return
+    end
+
+    local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
+    local rootPos, rootOnScreen = Camera:WorldToViewportPoint(root.Position)
+    if not headOnScreen and not rootOnScreen then
+        for _, d in pairs(esp) do if d then d.Visible = false end end
+        return
+    end
+
+    local screenY = headOnScreen and headPos.Y or rootPos.Y
+    local screenX = rootOnScreen and rootPos.X or headPos.X
+    local boxHeight = 100
+    local boxWidth = 50
+    local boxX = screenX - boxWidth / 2
+    local boxY = screenY - boxHeight * 0.1
+
+    if esp.HealthBarBG and esp.HealthBar and cfg.ShowHealthBar then
+        local barWidth = 6
+        local barHeight = boxHeight
+        local hpRatio = humanoid.Health / humanoid.MaxHealth
+        esp.HealthBarBG.Visible = true
+        esp.HealthBarBG.Position = Vector2.new(boxX - barWidth - 4, boxY)
+        esp.HealthBarBG.Size = Vector2.new(barWidth, barHeight)
+        esp.HealthBar.Visible = true
+        esp.HealthBar.Position = Vector2.new(boxX - barWidth - 4, boxY + barHeight * (1 - hpRatio))
+        esp.HealthBar.Size = Vector2.new(barWidth, barHeight * hpRatio)
+        if hpRatio > 0.5 then
+            esp.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+        elseif hpRatio > 0.25 then
+            esp.HealthBar.Color = Color3.fromRGB(255, 255, 0)
+        else
+            esp.HealthBar.Color = Color3.fromRGB(255, 0, 0)
+        end
+    elseif esp.HealthBarBG then
+        esp.HealthBarBG.Visible = false
+        if esp.HealthBar then esp.HealthBar.Visible = false end
+    end
+
+    if esp.Health and cfg.ShowHealth then
+        esp.Health.Visible = true
+        local hp = math.floor(humanoid.Health)
+        esp.Health.Position = Vector2.new(screenX, boxY + boxHeight + 5)
+        esp.Health.Text = hp .. " HP"
+        local ratio = hp / humanoid.MaxHealth
+        if ratio > 0.5 then
+            esp.Health.Color = Color3.fromRGB(0, 255, 0)
+        elseif ratio > 0.25 then
+            esp.Health.Color = Color3.fromRGB(255, 255, 0)
+        else
+            esp.Health.Color = Color3.fromRGB(255, 0, 0)
+        end
+    elseif esp.Health then
+        esp.Health.Visible = false
+    end
+
+    if esp.Distance and cfg.ShowDistance then
+        esp.Distance.Visible = true
+        esp.Distance.Position = Vector2.new(screenX, boxY + boxHeight + 18)
+        esp.Distance.Text = math.floor(dist) .. "m"
+    elseif esp.Distance then
+        esp.Distance.Visible = false
+    end
+
+    if esp.Box and cfg.ShowBox then
+        esp.Box.Visible = true
+        esp.Box.Position = Vector2.new(boxX, boxY)
+        esp.Box.Size = Vector2.new(boxWidth, boxHeight)
+    elseif esp.Box then
+        esp.Box.Visible = false
+    end
+
+    if esp.Name and cfg.ShowName then
+        esp.Name.Visible = true
+        esp.Name.Position = Vector2.new(screenX, boxY - 15)
+        esp.Name.Text = player.Name
+    elseif esp.Name then
+        esp.Name.Visible = false
+    end
+
+    if esp.Weapon and cfg.ShowWeapon then
+        esp.Weapon.Visible = true
+        local toolName = ""
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Tool") then
+                toolName = child.Name
+                break
+            end
+        end
+        esp.Weapon.Position = Vector2.new(screenX, boxY + boxHeight + 30)
+        esp.Weapon.Text = toolName
+    elseif esp.Weapon then
+        esp.Weapon.Visible = false
+    end
+
+    if esp.Tracer and cfg.ShowTracers then
+        esp.Tracer.Visible = true
+        esp.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        esp.Tracer.To = Vector2.new(screenX, boxY)
+    elseif esp.Tracer then
+        esp.Tracer.Visible = false
+    end
+
+    if esp.HeadDot and cfg.ShowHeadDot and headOnScreen then
+        esp.HeadDot.Visible = true
+        esp.HeadDot.Position = Vector2.new(headPos.X, headPos.Y)
+    elseif esp.HeadDot then
+        esp.HeadDot.Visible = false
+    end
+end
+
+-- ==================== 兼容 ESP ====================
+local LegacyESPObjects = {}
+
+local function createLegacyESP(player)
+    if LegacyESPObjects[player] then return end
+    local objs = {}
+
+    pcall(function() objs.Box = Drawing.new("Square") end)
+    pcall(function() objs.Tracer = Drawing.new("Line") end)
+    pcall(function() objs.NameLabel = Drawing.new("Text") end)
+    pcall(function() objs.HealthLabel = Drawing.new("Text") end)
+    pcall(function() objs.DistanceLabel = Drawing.new("Text") end)
+    pcall(function() objs.WeaponLabel = Drawing.new("Text") end)
+    pcall(function() objs.HealthBarBG = Drawing.new("Square") end)
+    pcall(function() objs.HealthBar = Drawing.new("Square") end)
+    pcall(function() objs.HeadDot = Drawing.new("Circle") end)
+
+    if objs.Box then
+        objs.Box.Thickness = 2
+        objs.Box.Color = Color3.fromRGB(255, 50, 50)
+        objs.Box.Filled = false
+        objs.Box.Visible = false
+    end
+    if objs.Tracer then
+        objs.Tracer.Thickness = 1
+        objs.Tracer.Color = Color3.fromRGB(255, 255, 255)
+        objs.Tracer.Visible = false
+    end
+    if objs.NameLabel then
+        objs.NameLabel.Size = 14
+        objs.NameLabel.Center = true
+        objs.NameLabel.Outline = true
+        objs.NameLabel.Color = Color3.fromRGB(255, 255, 255)
+        objs.NameLabel.Visible = false
+    end
+    if objs.HealthLabel then
+        objs.HealthLabel.Size = 12
+        objs.HealthLabel.Center = true
+        objs.HealthLabel.Outline = true
+        objs.HealthLabel.Visible = false
+    end
+    if objs.DistanceLabel then
+        objs.DistanceLabel.Size = 12
+        objs.DistanceLabel.Center = true
+        objs.DistanceLabel.Outline = true
+        objs.DistanceLabel.Color = Color3.fromRGB(180, 180, 180)
+        objs.DistanceLabel.Visible = false
+    end
+    if objs.WeaponLabel then
+        objs.WeaponLabel.Size = 11
+        objs.WeaponLabel.Center = true
+        objs.WeaponLabel.Outline = true
+        objs.WeaponLabel.Color = Color3.fromRGB(255, 200, 100)
+        objs.WeaponLabel.Visible = false
+    end
+    if objs.HealthBarBG then
+        objs.HealthBarBG.Color = Color3.fromRGB(0, 0, 0)
+        objs.HealthBarBG.Filled = true
+        objs.HealthBarBG.Thickness = 1
+        objs.HealthBarBG.Transparency = 0.8
+        objs.HealthBarBG.Visible = false
+    end
+    if objs.HealthBar then
+        objs.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+        objs.HealthBar.Filled = true
+        objs.HealthBar.Thickness = 1
+        objs.HealthBar.Transparency = 1
+        objs.HealthBar.Visible = false
+    end
+    if objs.HeadDot then
+        objs.HeadDot.Radius = 4
+        objs.HeadDot.Filled = true
+        objs.HeadDot.Color = Color3.fromRGB(255, 255, 0)
+        objs.HeadDot.NumSides = 16
+        objs.HeadDot.Visible = false
+    end
+
+    LegacyESPObjects[player] = objs
+end
+
+local function removeLegacyESP(player)
+    local objs = LegacyESPObjects[player]
+    if objs then
+        for _, d in pairs(objs) do
+            pcall(function() if d then d:Remove() end end)
+        end
+        LegacyESPObjects[player] = nil
+    end
+end
+
+local function updateLegacyESP(player, objs)
+    local cfg = getgenv().Config.ESP
+    local char = player.Character
+    if not char then
+        for _, d in pairs(objs) do if d then d.Visible = false end end
+        return
+    end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local head = char:FindFirstChild("Head")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not humanoid or humanoid.Health <= 0 or not head or not root then
+        for _, d in pairs(objs) do if d then d.Visible = false end end
+        return
+    end
+
+    if cfg.TeamCheck and player.Team == LocalPlayer.Team then
+        for _, d in pairs(objs) do if d then d.Visible = false end end
+        return
+    end
+
+    local camPos = Camera.CFrame.Position
+    local dist = (root.Position - camPos).Magnitude
+    if dist > cfg.MaxDistance then
+        for _, d in pairs(objs) do if d then d.Visible = false end end
+        return
+    end
+
+    local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
+    local rootPos, rootOnScreen = Camera:WorldToViewportPoint(root.Position)
+    if not headOnScreen and not rootOnScreen then
+        for _, d in pairs(objs) do if d then d.Visible = false end end
+        return
+    end
+
+    local legPos = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+    local screenY = headOnScreen and headPos.Y or rootPos.Y
+    local screenX = rootOnScreen and rootPos.X or headPos.X
+    local boxHeight = math.abs(headPos.Y - legPos.Y)
+    local boxWidth = boxHeight * 0.6
+    local boxX = screenX - boxWidth / 2
+    local boxY = screenY - boxHeight * 0.1
+
+    if objs.Box and cfg.ShowBox then
+        objs.Box.Visible = true
+        objs.Box.Size = Vector2.new(boxWidth, boxHeight)
+        objs.Box.Position = Vector2.new(boxX, boxY)
+    elseif objs.Box then
+        objs.Box.Visible = false
+    end
+
+    if objs.Tracer and cfg.ShowTracers then
+        objs.Tracer.Visible = true
+        objs.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        objs.Tracer.To = Vector2.new(screenX, screenY + boxHeight / 2)
+    elseif objs.Tracer then
+        objs.Tracer.Visible = false
+    end
+
+    if objs.NameLabel and cfg.ShowName then
+        objs.NameLabel.Visible = true
+        objs.NameLabel.Text = player.DisplayName or player.Name
+        objs.NameLabel.Position = Vector2.new(screenX, boxY - 15)
+    elseif objs.NameLabel then
+        objs.NameLabel.Visible = false
+    end
+
+    if objs.HealthLabel and cfg.ShowHealth then
+        objs.HealthLabel.Visible = true
+        local hp = math.floor(humanoid.Health)
+        objs.HealthLabel.Text = hp .. " HP"
+        objs.HealthLabel.Position = Vector2.new(screenX, boxY + boxHeight + 5)
+        local ratio = hp / humanoid.MaxHealth
+        if ratio > 0.5 then
+            objs.HealthLabel.Color = Color3.fromRGB(0, 255, 0)
+        elseif ratio > 0.25 then
+            objs.HealthLabel.Color = Color3.fromRGB(255, 255, 0)
+        else
+            objs.HealthLabel.Color = Color3.fromRGB(255, 0, 0)
+        end
+    elseif objs.HealthLabel then
+        objs.HealthLabel.Visible = false
+    end
+
+    if objs.DistanceLabel and cfg.ShowDistance then
+        objs.DistanceLabel.Visible = true
+        objs.DistanceLabel.Text = math.floor(dist) .. "m"
+        objs.DistanceLabel.Position = Vector2.new(screenX, boxY + boxHeight + 18)
+    elseif objs.DistanceLabel then
+        objs.DistanceLabel.Visible = false
+    end
+
+    if objs.WeaponLabel and cfg.ShowWeapon then
+        local toolName = "无"
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Tool") then
+                toolName = child.Name
+                break
+            end
+        end
+        objs.WeaponLabel.Visible = true
+        objs.WeaponLabel.Text = toolName
+        objs.WeaponLabel.Position = Vector2.new(screenX, boxY + boxHeight + 30)
+    elseif objs.WeaponLabel then
+        objs.WeaponLabel.Visible = false
+    end
+
+    if objs.HealthBarBG and objs.HealthBar and cfg.ShowHealthBar then
+        local barWidth = 6
+        local barHeight = boxHeight
+        local hpRatio = humanoid.Health / humanoid.MaxHealth
+        objs.HealthBarBG.Visible = true
+        objs.HealthBarBG.Position = Vector2.new(boxX - barWidth - 4, boxY)
+        objs.HealthBarBG.Size = Vector2.new(barWidth, barHeight)
+        objs.HealthBar.Visible = true
+        objs.HealthBar.Position = Vector2.new(boxX - barWidth - 4, boxY + barHeight * (1 - hpRatio))
+        objs.HealthBar.Size = Vector2.new(barWidth, barHeight * hpRatio)
+        if hpRatio > 0.5 then
+            objs.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+        elseif hpRatio > 0.25 then
+            objs.HealthBar.Color = Color3.fromRGB(255, 255, 0)
+        else
+            objs.HealthBar.Color = Color3.fromRGB(255, 0, 0)
+        end
+    elseif objs.HealthBarBG then
+        objs.HealthBarBG.Visible = false
+        if objs.HealthBar then objs.HealthBar.Visible = false end
+    end
+
+    if objs.HeadDot and cfg.ShowHeadDot and headOnScreen then
+        objs.HeadDot.Visible = true
+        objs.HeadDot.Position = Vector2.new(headPos.X, headPos.Y)
+    elseif objs.HeadDot then
+        objs.HeadDot.Visible = false
+    end
+end
+
+-- 初始化
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        createESP(player)
+        createLegacyESP(player)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        createESP(player)
+        createLegacyESP(player)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+    removeLegacyESP(player)
+end)
+
+-- ESP 更新
+RunService.RenderStepped:Connect(function()
+    local cfg = getgenv().Config.ESP
+    if not cfg.Enabled then
+        for _, esp in pairs(ESPObjects) do
+            for _, d in pairs(esp) do if d then d.Visible = false end end
+        end
+        for _, objs in pairs(LegacyESPObjects) do
+            for _, d in pairs(objs) do if d then d.Visible = false end end
+        end
+        return
+    end
+
+    if cfg.UseLegacy then
+        for _, esp in pairs(ESPObjects) do
+            for _, d in pairs(esp) do if d then d.Visible = false end end
+        end
+        for player, objs in pairs(LegacyESPObjects) do
+            if player and player.Parent then
+                updateLegacyESP(player, objs)
+            end
+        end
+    else
+        for _, objs in pairs(LegacyESPObjects) do
+            for _, d in pairs(objs) do if d then d.Visible = false end end
+        end
+        for player, esp in pairs(ESPObjects) do
+            if player and player.Parent then
+                pcall(function() updateESP(player, esp) end)
+            end
+        end
+    end
+end)
+
+-- UI 设置
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("菜单", "wrench")
+MenuGroup:AddLabel("菜单快捷键"):AddKeyPicker("MenuKeybind", {
+    Default = "RightShift",
+    NoUI = true,
+})
+Library.ToggleKeybind = Options.MenuKeybind
+
+MenuGroup:AddButton({
+    Text = "卸载脚本",
+    Func = function()
+        stopFly()
+        Library:Unload()
+    end,
+})
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({"MenuKeybind"})
+ThemeManager:SetFolder("RivalsUtility")
+SaveManager:SetFolder("RivalsUtility/Main")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+SaveManager:LoadAutoloadConfig()
